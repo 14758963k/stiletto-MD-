@@ -1,0 +1,57 @@
+// platforms/whatsapp.js
+import makeWASocket, { useSingleFileAuthState } from "@whiskeysockets/baileys";
+import P from "pino";
+import { config } from "../config.js";
+import { logMessage, formatError } from "../core/utils.js";
+
+/**
+ * Connects to WhatsApp using Baileys.
+ * Displays a QR code (or pairing code if available) and sets up stealth settings.
+ * @returns {object} WhatsApp socket instance.
+ */
+export async function connectWhatsApp() {
+  const { state, saveState } = useSingleFileAuthState("auth.json");
+
+  const sock = makeWASocket({
+    auth: state,
+    printQRInTerminal: true,         // Displays QR code for first-time pairing
+    markOnlineOnConnect: false,        // Remain offline for stealth
+    sendReceipts: false,               // Disable automatic read receipts
+    logger: P({ level: config.logLevel || "silent" }),
+    // pairingMode: config.pairing,    // Uncomment if code pairing is supported
+  });
+
+  sock.ev.on("creds.update", saveState);
+
+  // Pairing update events
+  sock.ev.on("pairing.update", (pairingInfo) => {
+    if (pairingInfo.code) {
+      logMessage(`Pairing Code: ${pairingInfo.code}`);
+    } else {
+      logMessage("Pairing update received, using default QR mode.");
+    }
+  });
+
+  // Presence updates
+  sock.ev.on("presence.update", (update) => {
+    logMessage(`Presence update: ${JSON.stringify(update)}`);
+  });
+
+  // Group participants update
+  sock.ev.on("group-participants.update", async (update) => {
+    logMessage(`Group participant update: ${JSON.stringify(update)}`);
+    // Auto-join or additional group logic can be added here.
+  });
+
+  // Extended connection updates
+  sock.ev.on("connection.update", (update) => {
+    logMessage(`Advanced connection update: ${JSON.stringify(update)}`);
+  });
+
+  // Extended error logging
+  sock.ev.on("error", (err) => {
+    logMessage(`Socket error: ${formatError(err)}`);
+  });
+
+  return sock;
+}
