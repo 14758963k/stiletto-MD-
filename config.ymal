@@ -1,0 +1,8 @@
+prefix: "."
+owner: "94743381623"
+mode: "public"
+pairing: "code"       # Options: "qr" or "code"
+maxConcurrentTasks: 4
+cleanupThreshold: 80  # Disk usage threshold in percent
+logLevel: "info"      # Options: info, debug, error
+debug: false          # Enable verbose debugging output
