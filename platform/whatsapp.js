@@ -1,8 +1,8 @@
 // platforms/whatsapp.js
 
-// Import entire module to support CommonJS exports
-import * as baileys from "@whiskeysockets/baileys";
-const { default: makeWASocket, useSingleFileAuthState } = baileys;
+// 1) Import the entire Baileys package as a default CJS export
+import pkg from "@whiskeysockets/baileys";
+const { default: makeWASocket, useSingleFileAuthState } = pkg;
 
 import P from "pino";
 import { config } from "../config.js";
@@ -27,7 +27,6 @@ export async function connectWhatsApp() {
 
   sock.ev.on("creds.update", saveState);
 
-  // Pairing update events
   sock.ev.on("pairing.update", (pairingInfo) => {
     if (pairingInfo.code) {
       logMessage(`Pairing Code: ${pairingInfo.code}`);
@@ -36,23 +35,18 @@ export async function connectWhatsApp() {
     }
   });
 
-  // Presence updates
   sock.ev.on("presence.update", (update) => {
     logMessage(`Presence update: ${JSON.stringify(update)}`);
   });
 
-  // Group participants update
   sock.ev.on("group-participants.update", async (update) => {
     logMessage(`Group participant update: ${JSON.stringify(update)}`);
-    // Auto-join or additional group logic can be added here.
   });
 
-  // Extended connection updates
   sock.ev.on("connection.update", (update) => {
     logMessage(`Advanced connection update: ${JSON.stringify(update)}`);
   });
 
-  // Extended error logging
   sock.ev.on("error", (err) => {
     logMessage(`Socket error: ${formatError(err)}`);
   });
