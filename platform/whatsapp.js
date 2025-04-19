@@ -2,7 +2,7 @@
 
 // 1) Import the entire Baileys package as a default CJS export
 import pkg from "@whiskeysockets/baileys";
-const { default: makeWASocket, useSingleFileAuthState } = pkg;
+const { default: makeWASocket, useMultiFileAuthState } = pkg;
 
 import P from "pino";
 import { config } from "../config.js";
@@ -14,7 +14,7 @@ import { logMessage, formatError } from "../core/utils.js";
  * @returns {object} WhatsApp socket instance.
  */
 export async function connectWhatsApp() {
-  const { state, saveState } = useSingleFileAuthState("auth.json");
+  const { state, saveCreds } = await useMultiFileAuthState("auth");
 
   const sock = makeWASocket({
     auth: state,
@@ -25,7 +25,7 @@ export async function connectWhatsApp() {
     // pairingMode: config.pairing,  // Uncomment if code pairing is supported
   });
 
-  sock.ev.on("creds.update", saveState);
+  sock.ev.on("creds.update", saveCreds);
 
   sock.ev.on("pairing.update", (pairingInfo) => {
     if (pairingInfo.code) {
