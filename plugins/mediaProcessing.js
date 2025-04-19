@@ -1,18 +1,15 @@
-// plugins/mediaProcessing.js
 import { logMessage, formatError } from "../core/utils.js";
 import { execSync } from "child_process";
+import { downloadMediaMessage } from "@whiskeysockets/baileys";
+import fs from "fs";
+import path from "path";
 
 /**
  * Processes the .sticker command.
- * Converts an image to a sticker (WebP format) with precise dimensions.
- * Cold response: no frills, just the result.
- * @param {object} sock - The WhatsApp socket instance.
- * @param {object} message - The incoming message object.
  */
 export async function processSticker(sock, message) {
   const remoteJid = message.key.remoteJid;
   try {
-    // Assume the attached image is saved as "input.jpg"
     execSync("ffmpeg -i input.jpg -vf scale=512:512 output.webp");
     await sock.sendMessage(remoteJid, { sticker: "output.webp" });
     logMessage("Image converted to sticker and sent.");
@@ -24,14 +21,10 @@ export async function processSticker(sock, message) {
 
 /**
  * Processes the .toimg command.
- * Converts a sticker (WebP) to a standard image (JPG).
- * @param {object} sock - The WhatsApp socket instance.
- * @param {object} message - The incoming message object.
  */
 export async function processToImage(sock, message) {
   const remoteJid = message.key.remoteJid;
   try {
-    // Assume sticker is saved as "input.webp"
     execSync("ffmpeg -i input.webp output.jpg");
     await sock.sendMessage(remoteJid, { image: { url: "output.jpg" } });
     logMessage("Sticker converted to image and sent.");
@@ -43,14 +36,10 @@ export async function processToImage(sock, message) {
 
 /**
  * Processes the .deep command.
- * Applies a deep media filter (placeholder) to an image.
- * @param {object} sock - The WhatsApp socket instance.
- * @param {object} message - The incoming message object.
  */
 export async function processDeepFilter(sock, message) {
   const remoteJid = message.key.remoteJid;
   try {
-    // Placeholder: Integrate a neural style transfer or similar effect
     await sock.sendMessage(remoteJid, { text: "Deep filter applied. Nothing personal." });
     logMessage("Deep filter processed.");
   } catch (error) {
@@ -61,15 +50,11 @@ export async function processDeepFilter(sock, message) {
 
 /**
  * Processes the .bass command.
- * Enhances the bass of an audio file using FFmpeg.
- * @param {object} sock - The WhatsApp socket instance.
- * @param {object} message - The incoming message object.
  */
 export async function processBass(sock, message) {
   const remoteJid = message.key.remoteJid;
   try {
-    // Placeholder: Enhance bass using FFmpeg; assumes input.mp3 exists
-    execSync("ffmpeg -i input.mp3 -af \"bass=g=10\" output.mp3");
+    execSync(`ffmpeg -i input.mp3 -af "bass=g=10" output.mp3`);
     await sock.sendMessage(remoteJid, { audio: { url: "output.mp3" } });
     logMessage("Bass enhancement applied.");
   } catch (error) {
@@ -80,19 +65,50 @@ export async function processBass(sock, message) {
 
 /**
  * Processes the .reverse command.
- * Reverses an audio file using FFmpeg.
- * @param {object} sock - The WhatsApp socket instance.
- * @param {object} message - The incoming message object.
  */
 export async function processReverse(sock, message) {
   const remoteJid = message.key.remoteJid;
   try {
-    // Placeholder: Reverse audio; assumes input.mp3 exists
-    execSync("ffmpeg -i input.mp3 -filter_complex \"areverse\" output.mp3");
+    execSync(`ffmpeg -i input.mp3 -filter_complex "areverse" output.mp3`);
     await sock.sendMessage(remoteJid, { audio: { url: "output.mp3" } });
     logMessage("Audio reversed successfully.");
   } catch (error) {
     logMessage("Error in .reverse: " + formatError(error));
     await sock.sendMessage(remoteJid, { text: "Audio reversal failed. Operation aborted." });
+  }
+}
+
+/**
+ * Processes the .vv command.
+ * Unlocks and resends view-once media.
+ */
+export async function processVV(sock, message) {
+  const remoteJid = message.key.remoteJid;
+  try {
+    const msgContent = message.message?.viewOnceMessage?.message;
+    if (!msgContent) throw new Error("No view-once media found in the message.");
+
+    const buffer = await downloadMediaMessage(
+      { message: msgContent },
+      "buffer",
+      {},
+      { logger: undefined, reuploadRequest: sock.updateMediaMessage }
+    );
+
+    const isImage = !!msgContent.imageMessage;
+    const fileName = isImage ? "unlocked.jpg" : "unlocked.mp4";
+    fs.writeFileSync(fileName, buffer);
+
+    const mediaObj = isImage
+      ? { image: fs.readFileSync(fileName), caption: "🔓 View-once image unlocked." }
+      : { video: fs.readFileSync(fileName), caption: "🔓 View-once video unlocked." };
+
+    await sock.sendMessage(remoteJid, mediaObj);
+    logMessage(".vv: View-once media unlocked and resent.");
+  } catch (error) {
+    logMessage("Error in .vv: " + formatError(error));
+    await sock.sendMessage(remoteJid, {
+      text: "⚠️ Couldn't unlock view-once media. Make sure to reply to it directly.",
+    });
   }
 }
