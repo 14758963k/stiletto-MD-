@@ -1,5 +1,9 @@
 // platforms/whatsapp.js
-import makeWASocket, { useSingleFileAuthState } from "@whiskeysockets/baileys";
+
+// Import entire module to support CommonJS exports
+import * as baileys from "@whiskeysockets/baileys";
+const { default: makeWASocket, useSingleFileAuthState } = baileys;
+
 import P from "pino";
 import { config } from "../config.js";
 import { logMessage, formatError } from "../core/utils.js";
@@ -15,10 +19,10 @@ export async function connectWhatsApp() {
   const sock = makeWASocket({
     auth: state,
     printQRInTerminal: true,         // Displays QR code for first-time pairing
-    markOnlineOnConnect: false,        // Remain offline for stealth
-    sendReceipts: false,               // Disable automatic read receipts
+    markOnlineOnConnect: false,      // Remain offline for stealth
+    sendReceipts: false,             // Disable automatic read receipts
     logger: P({ level: config.logLevel || "silent" }),
-    // pairingMode: config.pairing,    // Uncomment if code pairing is supported
+    // pairingMode: config.pairing,  // Uncomment if code pairing is supported
   });
 
   sock.ev.on("creds.update", saveState);
